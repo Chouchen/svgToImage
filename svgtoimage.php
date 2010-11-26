@@ -4,6 +4,7 @@
 // prendre en compte l'opacité grâce à imagecolorallocatealpha ?
 // conversion des couleurs "black" , "blue", etc en #000 etc.
 // stroke-width pour tous \o/
+// pour les rectangles avec point ou tiret http://fr.php.net/manual/fr/function.imagesetstyle.php
 
 include 'log.php';
 class SVGTOIMAGE{
@@ -20,6 +21,29 @@ class SVGTOIMAGE{
 	protected $_showDesc = false;
 	private $transparentColor = array(0,0,255);
 	public $_debug = true;
+	
+	//const TIRET = array($red, $red, $red, $red, $red, IMG_COLOR_TRANSPARENT, IMG_COLOR_TRANSPARENT, IMG_COLOR_TRANSPARENT, IMG_COLOR_TRANSPARENT, IMG_COLOR_TRANSPARENT);
+	
+	private $colors = array(
+		'black'			=> '#000000',
+		'red'			=> '#FF0000',
+		'white'			=> '#FFFFFF',
+		'turquoise' 	=> '#00FFFF',
+		'light grey'	=> '#C0C0C0',
+		'light blue'	=> '#0000FF',
+		'dark grey'		=> '#808080',
+		'dark blue'		=> '#0000A0',
+		'light purple' 	=> '#FF0080',
+		'orange'		=> '#FF8040',
+		'dark purple' 	=> '#800080',
+		'brown'			=> '#804000',
+		'yellow'		=> '#FFFF00',
+		'burgundy'		=> '#800000',
+		'pastel green'	=> '#00FF00',
+		'forest green'	=> '#808000',
+		'pink'			=> '#FF00FF',
+		'grass green'	=> '#408080',
+	);
 	
 	public function __construct($svg, $format = 'png'){
 		if($this->_debug) $this->_log = new Log('log.dat');
@@ -127,7 +151,11 @@ class SVGTOIMAGE{
 	}
 	
 	private function _allocateColor($color){
-		$arrayColor = $this->_parseColor($color);
+		if($color != '' && array_key_exists($color, $this->colors)){
+			$arrayColor = $this->_parseColor($this->colors[$color]);
+		}else{
+			$arrayColor = $this->_parseColor($color);
+		}
 		return imagecolorallocate( $this->_image, $arrayColor[0], $arrayColor[1], $arrayColor[2] );
 	}
 	
@@ -183,10 +211,59 @@ class SVGTOIMAGE{
 		imagecopy($this->_image,$newImage,$x,$y,0,0,imagesx($newImage) , imagesy($newImage));
 	}
 
+	private function _pathIsW3C($path){
+		if(strripos($path, ','))
+			return true;
+		return false;
+	}
+	
+	private function _parseInt($string){
+		if(preg_match('/(\d+)/', $string, $array)) {
+			return $array[1];
+		} else {
+			return 0;
+		}
+	}
+	
 	private function _parsePath($pathNode){
-		// tODO with imageline ( resource $image , int $x1 , int $y1 , int $x2 , int $y2 , int $color )
+	// <path d="M50,50 A30,30 0 0,1 35,20 L100,100 M110,110 L100,0" style="stroke:#660000; fill:none;"/> 
+	//<path d="M20 150 L150 350 Z" />
 		// imagesetbrush
 		// imagesetstyle  (pour dotted, dashed etc)
+		$path = $pathNode->attributes()->d;
+		//if($this->_debug) $this->_log->message('Path = '.$path);
+		if(substr($path, 0,1) != 'M'){
+			if($this->_debug) $this->_log->error('Mauvais path rencontré : '.$path);
+			return;
+		}
+		if($this->_pathIsW3C($path)){
+			if($this->_debug) $this->_log->message('Path est compatible W3C');
+			
+			
+		}else{
+			if($this->_debug) $this->_log->message('Path n\'est pas compatible W3C');
+			$pathArray = explode(' ', $path);
+			$nbArray = count($pathArray);
+			$nbLine = (($nbArray-1)/2)-1;
+			if($this->_debug) $this->_log->message($nbLine.' lignes à dessiner');
+			for($i = 2; $i < $nbArray; $i=$i+2){
+				// Ligne droite
+				if(substr($pathArray[$i], 0, 1) == 'L'){
+					if(!imageline( $this->_image , $this->_parseInt($pathArray[$i-2]) , $this->_parseInt($pathArray[$i-1]) , $this->_parseInt($pathArray[$i]) , $this->_parseInt($pathArray[$i+1]) , $this->_allocateColor('black') )){
+						if($this->_debug) $this->_log->error('Chemin erroné : '.$this->_parseInt($pathArray[$i-2]).' - '.$this->_parseInt($pathArray[$i-1]).' - '.$this->_parseInt($pathArray[$i]).' - '.$this->_parseInt($pathArray[$i+1]));
+					}else{
+						if($this->_debug) $this->_log->message('Chemin : '.$this->_parseInt($pathArray[$i-2]).' - '.$this->_parseInt($pathArray[$i-1]).' - '.$this->_parseInt($pathArray[$i]).' - '.$this->_parseInt($pathArray[$i+1]));
+					}
+				}
+				if(substr($pathArray[$i], 0, 1) == 'Z'){
+					if(!imageline( $this->_image , $this->_parseInt($pathArray[$i-2]) , $this->_parseInt($pathArray[$i-1]) , $this->_parseInt($pathArray[0]) , $this->_parseInt($pathArray[1]) , $this->_allocateColor('black') )){
+						if($this->_debug) $this->_log->error('Chemin erroné : '.$this->_parseInt($pathArray[$i-2]).' - '.$this->_parseInt($pathArray[$i-1]).' - '.$this->_parseInt($pathArray[0]).' - '.$this->_parseInt($pathArray[1]));
+					}else{
+						if($this->_debug) $this->_log->message('Chemin : '.$this->_parseInt($pathArray[$i-2]).' - '.$this->_parseInt($pathArray[$i-1]).' - '.$this->_parseInt($pathArray[0]).' - '.$this->_parseInt($pathArray[1]));
+					}
+				}
+			}			
+		}
 	}
 	
 	private function _parseCircle($circleNode){
@@ -198,7 +275,6 @@ class SVGTOIMAGE{
 		$stroke = '';
 		foreach($circleNode->attributes() as $name => $value){
 			switch($name){
-				//TODO style display:none
 				case 'cx': $x = $value; break;
 				case 'cy': $y = $value; break;
 				case 'r': $r = $value; break;
@@ -215,8 +291,8 @@ class SVGTOIMAGE{
 		$thickness = imagesetthickness( $this->_image , (int)$strokeWidth );
 		if($this->_debug && !$thickness) $this->_log->error('Erreur dans la mise en place de l\'épaisseur du trait');
 			
-		$colorStroke = $this->_allocateColor($stroke);
-		$colorFill = $this->_allocateColor($fill);
+		$colorStroke = $this->_allocateColor((string)$stroke);
+		$colorFill = $this->_allocateColor((string)$fill);
 		
 		if($fill == ''){
 			imagearc($this->_image , $x , $y , $r*2 , $r*2,0,359.9, $colorStroke );
@@ -257,8 +333,8 @@ class SVGTOIMAGE{
 		}
 		if($width == 0 || $height == 0)
 			return;
-		$colorStroke = $this->_allocateColor($stroke);
-		$colorFill = $this->_allocateColor($fill);
+		$colorStroke = $this->_allocateColor((string)$stroke);
+		$colorFill = $this->_allocateColor((string)$fill);
 		$thickness = imagesetthickness( $this->_image , (int)$strokeWidth );
 		if($this->_debug && !$thickness) $this->_log->error('Erreur dans la mise en place de l\'épaisseur du trait');
 		if($this->_debug) $this->_log->message('Rectangle - x : '.$x.' - y : '.$y.' - width : '.$width.' - height : '.$height.' - fill : '.$colorFill[0].'-'.$colorFill[1].'-'.$colorFill[2].' - stroke : '.$colorStroke[0].'-'.$colorStroke[1].'-'.$colorStroke[2]);
@@ -290,6 +366,8 @@ class SVGTOIMAGE{
 				$this->_parseCircle($element);
 			if($element->getName() == 'rect')
 				$this->_parseRectangle($element);
+			if($element->getName() == 'path')
+				$this->_parsePath($element);
 			if($element->getName() == 'desc' && $this->_showDesc)
 				$writeDesc = $element;
 		}
