@@ -225,45 +225,80 @@ class SVGTOIMAGE{
 		}
 	}
 	
+	private function _drawLine($x1, $y1, $x2, $y2, $color){
+		if(!imageline( $this->_image , $x1, $y1, $x2, $y2, $color )){
+			if($this->_debug) $this->_log->error('Chemin erroné : '.$x1.' - '.$y1.' - '.$x2.' - '.$y2);
+		}else{
+			if($this->_debug) $this->_log->message('Chemin : '.$x1.' - '.$y1.' - '.$x2.' - '.$y2);
+		}
+	}
+	
 	private function _parsePath($pathNode){
 	// <path d="M50,50 A30,30 0 0,1 35,20 L100,100 M110,110 L100,0" style="stroke:#660000; fill:none;"/> 
 	//<path d="M20 150 L150 350 Z" />
 		// imagesetbrush
 		// imagesetstyle  (pour dotted, dashed etc)
-		$path = $pathNode->attributes()->d;
+		$path = '';
+		$strokeWidth = 1;
+		$fill = '';
+		$stroke = '';
+		foreach($pathNode->attributes() as $name=>$value){
+			switch($name){
+				case 'd': $path = $value; break;
+				case 'stroke': $stroke = $value; break;
+				case 'fill': $fill = ($value == 'none') ? '' : $value; break;
+				case 'stroke-width' : $strokeWidth = $value; break;
+				case 'style' : if(strripos($value, 'display: none') || strripos($value, 'display:none')) return; break;
+			}
+		}
+		//$path = $pathNode->attributes()->d;
 		//if($this->_debug) $this->_log->message('Path = '.$path);
 		if(substr($path, 0,1) != 'M'){
 			if($this->_debug) $this->_log->error('Mauvais path rencontré : '.$path);
 			return;
 		}
-		if($this->_pathIsW3C($path)){
+		/*if($this->_pathIsW3C($path)){
 			if($this->_debug) $this->_log->message('Path est compatible W3C');
+		}else{*/
+		$thickness = imagesetthickness( $this->_image , $this->_parseInt($strokeWidth) );
+		if($this->_debug && !$thickness) $this->_log->error('Erreur dans la mise en place de l\'épaisseur du trait');
+		else $this->_log->message('épaisseur du trait à : '.$this->_parseInt($strokeWidth));
+		$colorStroke = $stroke != '' ? $this->_allocateColor((string)$stroke) : $this->_allocateColor('black');
+		$colorFill = $fill != '' ? $this->_allocateColor((string)$fill) : $this->_allocateColor('black');
+		$lastOpe = '';
+		
+		$pathArray = split('[ ,]', $path); //explode(' ', $path);
+		$nbArray = count($pathArray);
+		$nbLine = (($nbArray-1)/2)-1;
+		if($this->_debug) $this->_log->message($nbLine.' lignes à dessiner');
+		for($i = 2; $i < $nbArray; $i=$i+2){
 			
+			// Ligne droite
+			if(substr($pathArray[$i], 0, 1) == 'L'){
+				$this->_drawLine($this->_parseInt($pathArray[$i-2]) , $this->_parseInt($pathArray[$i-1]) , $this->_parseInt($pathArray[$i]) , $this->_parseInt($pathArray[$i+1]) , $colorStroke);
+				$lastOpe = 'L';
+			}
 			
-		}else{
-			if($this->_debug) $this->_log->message('Path n\'est pas compatible W3C');
-			$pathArray = explode(' ', $path);
-			$nbArray = count($pathArray);
-			$nbLine = (($nbArray-1)/2)-1;
-			if($this->_debug) $this->_log->message($nbLine.' lignes à dessiner');
-			for($i = 2; $i < $nbArray; $i=$i+2){
-				// Ligne droite
-				if(substr($pathArray[$i], 0, 1) == 'L'){
-					if(!imageline( $this->_image , $this->_parseInt($pathArray[$i-2]) , $this->_parseInt($pathArray[$i-1]) , $this->_parseInt($pathArray[$i]) , $this->_parseInt($pathArray[$i+1]) , $this->_allocateColor('black') )){
-						if($this->_debug) $this->_log->error('Chemin erroné : '.$this->_parseInt($pathArray[$i-2]).' - '.$this->_parseInt($pathArray[$i-1]).' - '.$this->_parseInt($pathArray[$i]).' - '.$this->_parseInt($pathArray[$i+1]));
-					}else{
-						if($this->_debug) $this->_log->message('Chemin : '.$this->_parseInt($pathArray[$i-2]).' - '.$this->_parseInt($pathArray[$i-1]).' - '.$this->_parseInt($pathArray[$i]).' - '.$this->_parseInt($pathArray[$i+1]));
-					}
+			// Même chose que la dernière opé
+			if(is_numeric(substr($pathArray[$i], 0, 1))){
+				switch($lastOpe){
+					case 'L': $this->_drawLine($this->_parseInt($pathArray[$i-2]) , $this->_parseInt($pathArray[$i-1]) , $this->_parseInt($pathArray[$i]) , $this->_parseInt($pathArray[$i+1]) , $colorStroke); break;
+					case 'Z': if($this->_debug) $this->_log->error('2 bouclages dans une boucle'); break;
+					
 				}
-				if(substr($pathArray[$i], 0, 1) == 'Z'){
-					if(!imageline( $this->_image , $this->_parseInt($pathArray[$i-2]) , $this->_parseInt($pathArray[$i-1]) , $this->_parseInt($pathArray[0]) , $this->_parseInt($pathArray[1]) , $this->_allocateColor('black') )){
-						if($this->_debug) $this->_log->error('Chemin erroné : '.$this->_parseInt($pathArray[$i-2]).' - '.$this->_parseInt($pathArray[$i-1]).' - '.$this->_parseInt($pathArray[0]).' - '.$this->_parseInt($pathArray[1]));
-					}else{
-						if($this->_debug) $this->_log->message('Chemin : '.$this->_parseInt($pathArray[$i-2]).' - '.$this->_parseInt($pathArray[$i-1]).' - '.$this->_parseInt($pathArray[0]).' - '.$this->_parseInt($pathArray[1]));
-					}
-				}
-			}			
+			}
+				
+			// boucler la boucle
+			if(substr($pathArray[$i], 0, 1) == 'Z'){
+				$this->_drawLine($this->_parseInt($pathArray[$i-2]) , $this->_parseInt($pathArray[$i-1]) , $this->_parseInt($pathArray[0]) , $this->_parseInt($pathArray[1]) , $colorStroke);
+				$lastOpe = 'Z'; //utile?
+			}
+					
 		}
+		imagecolordeallocate( $this->_image, $colorStroke);
+		imagecolordeallocate( $this->_image, $colorFill);
+		imagesetthickness ( $this->_image , 1 );
+		/*}*/
 	}
 	
 	private function _parseCircle($circleNode){
@@ -358,7 +393,7 @@ class SVGTOIMAGE{
 		$writeDesc = null;
 		$this->_image = imagecreatetruecolor($this->_getImageWidth(), $this->_getImageHeight());
 		imagealphablending($this->_image, true);
-		imageantialias($this->_image, true);
+		//imageantialias($this->_image, true); // On ne peut pas gérer l'épaisseur des traits si l'antialiasing est activé... lol ?
 		foreach($this->_svgXML->children() as $element){
 			if($element->getName() == 'image')
 				$this->_parseImage($element);
