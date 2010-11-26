@@ -251,15 +251,11 @@ class SVGTOIMAGE{
 				case 'style' : if(strripos($value, 'display: none') || strripos($value, 'display:none')) return; break;
 			}
 		}
-		//$path = $pathNode->attributes()->d;
-		//if($this->_debug) $this->_log->message('Path = '.$path);
 		if(substr($path, 0,1) != 'M'){
 			if($this->_debug) $this->_log->error('Mauvais path rencontré : '.$path);
 			return;
 		}
-		/*if($this->_pathIsW3C($path)){
-			if($this->_debug) $this->_log->message('Path est compatible W3C');
-		}else{*/
+
 		$thickness = imagesetthickness( $this->_image , $this->_parseInt($strokeWidth) );
 		if($this->_debug && !$thickness) $this->_log->error('Erreur dans la mise en place de l\'épaisseur du trait');
 		else $this->_log->message('épaisseur du trait à : '.$this->_parseInt($strokeWidth));
@@ -270,35 +266,84 @@ class SVGTOIMAGE{
 		$pathArray = split('[ ,]', $path); //explode(' ', $path);
 		$nbArray = count($pathArray);
 		$nbLine = (($nbArray-1)/2)-1;
-		if($this->_debug) $this->_log->message($nbLine.' lignes à dessiner');
-		for($i = 2; $i < $nbArray; $i=$i+2){
-			
-			// Ligne droite
-			if(substr($pathArray[$i], 0, 1) == 'L'){
-				$this->_drawLine($this->_parseInt($pathArray[$i-2]) , $this->_parseInt($pathArray[$i-1]) , $this->_parseInt($pathArray[$i]) , $this->_parseInt($pathArray[$i+1]) , $colorStroke);
+		if($this->_debug) $this->_log->message($nbLine.' lignes à dessiner sur un path de '.$nbArray);
+		//for($i = 2; $i < $nbArray; ){
+		$i = 0;
+		$lastX = 0;
+		$lastY = 0;
+		while ($i < $nbArray) {
+			// Changement de départ
+			if(substr($pathArray[$i], 0, 1) == 'M'){
+				$lastX = $this->_parseInt($pathArray[$i]);
+				$lastY = $this->_parseInt($pathArray[$i+1]);
+				$lastOpe = 'M';
+				$i=$i+2;
+
+			}elseif(substr($pathArray[$i], 0, 1) == 'L'){
+				$newX = $this->_parseInt($pathArray[$i]);
+				$newY = $this->_parseInt($pathArray[$i+1]);
+				$this->_drawLine($lastX , $lastY , $newX , $newY , $colorStroke);
 				$lastOpe = 'L';
-			}
-			
-			// Même chose que la dernière opé
-			if(is_numeric(substr($pathArray[$i], 0, 1))){
+				$lastX = $newX;
+				$lastY = $newY;
+				$i=$i+2;
+
+			}elseif(substr($pathArray[$i], 0, 1) == 'H'){
+				$newX = $this->_parseInt($pathArray[$i]);
+				$this->_drawLine($lastX , $lastY , $newX , $lastY , $colorStroke);
+				$lastOpe = 'H';
+				$lastX = $newX;
+				$i++;
+
+			}elseif(substr($pathArray[$i], 0, 1) == 'V'){
+				$newY = $this->_parseInt($pathArray[$i]);
+				$this->_drawLine($lastX , $lastY , $lastX , $newY , $colorStroke);
+				$lastY = $newY;
+				$lastOpe = 'V';
+				$i++;
+
+			}elseif(is_numeric(substr($pathArray[$i], 0, 1))){
 				switch($lastOpe){
-					case 'L': $this->_drawLine($this->_parseInt($pathArray[$i-2]) , $this->_parseInt($pathArray[$i-1]) , $this->_parseInt($pathArray[$i]) , $this->_parseInt($pathArray[$i+1]) , $colorStroke); break;
-					case 'Z': if($this->_debug) $this->_log->error('2 bouclages dans une boucle'); break;
-					
+					case 'L': 
+						$newX = $this->_parseInt($pathArray[$i]);
+						$newY = $this->_parseInt($pathArray[$i+1]);
+						$this->_drawLine($lastX , $lastY , $newX , $newY , $colorStroke);
+						$lastX = $newX;
+						$lastY = $newY;
+						break;
+					case 'H': 
+						$newX = $this->_parseInt($pathArray[$i]);
+						$this->_drawLine($lastX , $lastY , $newX , $lastY , $colorStroke);
+						$lastX = $newX;
+						$i++;
+				 		break;
+					case 'V': 
+						$newY = $this->_parseInt($pathArray[$i]);
+						$this->_drawLine($lastX , $lastY , $lastX , $newY , $colorStroke);
+						$lastY = $newY;
+						$i++;
+						break;
+					case 'Z': 
+						if($this->_debug) $this->_log->error('2 bouclages dans une boucle'); 
+						$i++;
+						break;
+					default : 
+						if($this->_debug) $this->_log->error('last opé inconnue '.$lastOpe); 
+						$i++; 
+						break;
 				}
-			}
-				
-			// boucler la boucle
-			if(substr($pathArray[$i], 0, 1) == 'Z'){
-				$this->_drawLine($this->_parseInt($pathArray[$i-2]) , $this->_parseInt($pathArray[$i-1]) , $this->_parseInt($pathArray[0]) , $this->_parseInt($pathArray[1]) , $colorStroke);
+
+			}elseif(substr($pathArray[$i], 0, 1) == 'Z'){
+				$this->_drawLine($lastX , $lastY , $this->_parseInt($pathArray[0]) , $this->_parseInt($pathArray[1]) , $colorStroke);
 				$lastOpe = 'Z'; //utile?
-			}
-					
+				$i++;
+			}else 
+				$i++; // au cas où.
+			if($this->_debug) $this->_log->message('counter :'.$i);
 		}
 		imagecolordeallocate( $this->_image, $colorStroke);
 		imagecolordeallocate( $this->_image, $colorFill);
 		imagesetthickness ( $this->_image , 1 );
-		/*}*/
 	}
 	
 	private function _parseCircle($circleNode){
