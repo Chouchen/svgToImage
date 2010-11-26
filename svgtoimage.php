@@ -1,4 +1,10 @@
 <?
+// TODO
+// ajouter header thanks to http://fr.php.net/manual/fr/function.image-type-to-mime-type.php
+// prendre en compte l'opacité grâce à imagecolorallocatealpha ?
+// conversion des couleurs "black" , "blue", etc en #000 etc.
+// stroke-width pour tous \o/
+
 include 'log.php';
 class SVGTOIMAGE{
 	
@@ -98,7 +104,7 @@ class SVGTOIMAGE{
 		return isset($this->_height) ? $this->_height : $this->_svgXML->attributes()->height;
 	}
 	
-
+	
 	private function _parseColor($colorCode){	
 		if(strlen($colorCode) == 7){
 			if($this->_debug) $this->_log->message('Parse Color '.$colorCode);
@@ -118,6 +124,11 @@ class SVGTOIMAGE{
 		}
 		if($this->_debug) $this->_log->error('Couleur mal indiquée '.$colorCode);	
 		return array(0,0,0);
+	}
+	
+	private function _allocateColor($color){
+		$arrayColor = $this->_parseColor($color);
+		return imagecolorallocate( $this->_image, $arrayColor[0], $arrayColor[1], $arrayColor[2] );
 	}
 	
 	private function _parseImage($imageNode){
@@ -172,10 +183,17 @@ class SVGTOIMAGE{
 		imagecopy($this->_image,$newImage,$x,$y,0,0,imagesx($newImage) , imagesy($newImage));
 	}
 
+	private function _parsePath($pathNode){
+		// tODO with imageline ( resource $image , int $x1 , int $y1 , int $x2 , int $y2 , int $color )
+		// imagesetbrush
+		// imagesetstyle  (pour dotted, dashed etc)
+	}
+	
 	private function _parseCircle($circleNode){
 		$x = 0;
 		$y = 0;
 		$r = 0;
+		$strokeWidth = 1;
 		$fill = '';
 		$stroke = '';
 		foreach($circleNode->attributes() as $name => $value){
@@ -187,20 +205,29 @@ class SVGTOIMAGE{
 				case 'fill': $fill = ($value == 'none') ? '' : $value; break;
 				case 'stroke': $stroke = $value; break;
 				case 'style' : if(strripos($value, 'display: none') || strripos($value, 'display:none')) return; break;
+				case 'stroke-width' : $strokeWidth = $value; break;
 			}
 		}
 		if($r == 0)
 			return;
-		$colorStroke = $this->_parseColor($stroke);
-		$colorFill = $this->_parseColor($fill);
-		if($this->_debug) $this->_log->message('Cercle - x : '.$x.' - y : '.$y.' - rayon : '.$r.' - fill : '.$colorFill[0].'-'.$colorFill[1].'-'.$colorFill[2].' - stroke : '.$colorStroke[0].'-'.$colorStroke[1].'-'.$colorStroke[2]);
-		if($fill == ''){
+		if($this->_debug) $this->_log->message('Cercle - x : '.$x.' - y : '.$y.' - rayon : '.$r.'-'.$colorStroke[2].' - épaisseur : '.$strokeWidth);
+		
+		$thickness = imagesetthickness( $this->_image , (int)$strokeWidth );
+		if($this->_debug && !$thickness) $this->_log->error('Erreur dans la mise en place de l\'épaisseur du trait');
 			
-			imageellipse ($this->_image , $x , $y , $r*2 , $r*2, imagecolorallocate($this->_image, $colorStroke[0], $colorStroke[1], $colorStroke[2]) );
+		$colorStroke = $this->_allocateColor($stroke);
+		$colorFill = $this->_allocateColor($fill);
+		
+		if($fill == ''){
+			imagearc($this->_image , $x , $y , $r*2 , $r*2,0,359.9, $colorStroke );
+			//imageellipse ($this->_image , $x , $y , $r*2 , $r*2, $colorStroke );
 		}else{
 			
-			imagefilledellipse($this->_image , $x , $y , $r*2 , $r*2 , imagecolorallocate($this->_image, $colorFill[0], $colorFill[1], $colorFill[2]) );
+			imagefilledarc($this->_image , $x , $y , $r*2 , $r*2 ,0,359.9, $colorFill, IMG_ARC_PIE );
 		}
+		imagecolordeallocate( $this->_image, $colorStroke);
+		imagecolordeallocate( $this->_image, $colorFill);
+		imagesetthickness ( $this->_image , 1 );
 	}
 	
 	private function _parseRectangle($rectNode){
@@ -212,9 +239,11 @@ class SVGTOIMAGE{
 		$r = 0;
 		$fill = '';
 		$stroke = '';
+		$strokeWidth = 1;
 		foreach($rectNode->attributes() as $name => $value){
 			switch($name){
-				//TODO style display:none
+			// imagesetthickness ( resource $image , int $thickness )
+				// imagesetstyle  (pour dotted, dashed etc)
 				case 'x': $x = $value; break;
 				case 'y': $y = $value; break;
 				case 'r': $r = $value; break;
@@ -222,19 +251,25 @@ class SVGTOIMAGE{
 				case 'height': $height = $value; break;
 				case 'fill': $fill = ($value == 'none') ? '' : $value; break;
 				case 'stroke': $stroke = $value; break;
+				case 'stroke-width' : $strokeWidth = $value; break;
 				case 'style' : if(strripos($value, 'display: none') || strripos($value, 'display:none')) return; break;
 			}
 		}
 		if($width == 0 || $height == 0)
 			return;
-		$colorStroke = $this->_parseColor($stroke);
-		$colorFill = $this->_parseColor($fill);
+		$colorStroke = $this->_allocateColor($stroke);
+		$colorFill = $this->_allocateColor($fill);
+		$thickness = imagesetthickness( $this->_image , (int)$strokeWidth );
+		if($this->_debug && !$thickness) $this->_log->error('Erreur dans la mise en place de l\'épaisseur du trait');
 		if($this->_debug) $this->_log->message('Rectangle - x : '.$x.' - y : '.$y.' - width : '.$width.' - height : '.$height.' - fill : '.$colorFill[0].'-'.$colorFill[1].'-'.$colorFill[2].' - stroke : '.$colorStroke[0].'-'.$colorStroke[1].'-'.$colorStroke[2]);
 		if($fill == ''){
-			imagerectangle($this->_image , $x , $y , $x+$width , $y+$height, imagecolorallocate($this->_image, $colorStroke[0], $colorStroke[1], $colorStroke[2]) ); //resource $image , int $x1 , int $y1 , int $x2 , int $y2 , int $color
+			imagerectangle($this->_image , $x , $y , $x+$width , $y+$height, $colorStroke); //resource $image , int $x1 , int $y1 , int $x2 , int $y2 , int $color
 		}else{
-			imagefilledrectangle ($this->_image , $x , $y , $x+$width , $y+$height, imagecolorallocate($this->_image, $colorFill[0], $colorFill[1], $colorFill[2]) );
+			imagefilledrectangle ($this->_image , $x , $y , $x+$width , $y+$height, $colorFill );
 		}
+		imagecolordeallocate($this->_image,$colorStroke);
+		imagecolordeallocate($this->_image,$colorFill);
+		imagesetthickness ( $this->_image , 1 );
 	}
 	
 	private function _parseDescription($desc){
@@ -243,8 +278,11 @@ class SVGTOIMAGE{
 	}
 
 	public function toImage(){
+		//$test = Imagick::__construct('http://labs.shikiryu.com/experimental-cut/images/pieces/2.png');
 		$writeDesc = null;
 		$this->_image = imagecreatetruecolor($this->_getImageWidth(), $this->_getImageHeight());
+		imagealphablending($this->_image, true);
+		imageantialias($this->_image, true);
 		foreach($this->_svgXML->children() as $element){
 			if($element->getName() == 'image')
 				$this->_parseImage($element);
@@ -256,6 +294,7 @@ class SVGTOIMAGE{
 				$writeDesc = $element;
 		}
 		if($writeDesc) $this->_parseDescription($writeDesc);
+		//imagefilter ( $this->_image , IMG_FILTER_SMOOTH, 6);
 		return imagepng($this->_image);
 	}
 
