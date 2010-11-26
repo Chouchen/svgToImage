@@ -12,7 +12,7 @@ $svg = '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="600" height
 <circle cx="50" cy="50" r="50" fill="turquoise" stroke="#000"></circle>
 <circle cx="100" cy="50" r="40" stroke="#000" stroke-width="2" fill="none"/>
 <image x="170" y="277" width="48" height="66" preserveAspectRatio="none" href="http://labs.shikiryu.com/experimental-cut/images/pieces/1.png" style="cursor: move; opacity: 1; " r="90" opacity="1" transform="rotate(21.91207728 194 310)"></image>
-<path d="M250 150 L150 350 L350 350 Z" />
+<path d="M250,150 L150,350 350,350 Z" stroke="red" stroke-width="10" />
 </svg>';
 
 $svgtoimage = SVGTOIMAGE::parse($svg);
