@@ -267,9 +267,9 @@ class SVGTOIMAGE{
 		//rotating the image if needed
 		if($r != 0){
 			if($this->_debug){
-				if($newImage = imagerotate($newImage, - floatval($r), -1))
+				if($newImage = imagerotate($newImage, - floatval($r), -1)){
 					$this->_log->message('Rotating image');
-				else
+				}else
 					$this->_log->error('Rotating image');		
 			}else{
 				$newImage = imagerotate($newImage, - floatval($r), -1);
@@ -277,9 +277,10 @@ class SVGTOIMAGE{
 			$blue = imagecolorallocate($newImage, $this->transparentColor[0], $this->transparentColor[1],$this->transparentColor[2]);
 			imagecolortransparent($newImage, $blue);
 		}
-		
-		imagecopy($this->_image,$newImage,$x,$y,0,0, $width , $height);
-		//imagecopy($this->_image,$newImage,$x,$y,0,0,imagesx($newImage) , imagesy($newImage));
+		$newWidth = imagesx($newImage);
+		$newHeight = imagesy($newImage);
+		//imagecopy($this->_image,$newImage,$x,$y,0,0, $width , $height);
+		imagecopy($this->_image,$newImage,($newWidth == $width) ? $x : $x-($newWidth-$width)/2,($newHeight == $height) ? $y : $y-($newHeight-$height)/2,0,0,imagesx($newImage) , imagesy($newImage));
 	}
 
 	/*
