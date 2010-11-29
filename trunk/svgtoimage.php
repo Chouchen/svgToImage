@@ -1,8 +1,6 @@
 <?
 // TODO
-// ajouter header thanks to http://fr.php.net/manual/fr/function.image-type-to-mime-type.php
 // prendre en compte l'opacité grâce à imagecolorallocatealpha ?
-// stroke-width pour tous \o/
 // pour les rectangles avec point ou tiret http://fr.php.net/manual/fr/function.imagesetstyle.php
 // ajout de title
 
@@ -20,7 +18,7 @@ class SVGTOIMAGE{
 	protected $_showDesc = false;
 	protected $_desc;
 	private $transparentColor = array(0,0,255);
-	public $_debug = true;
+	public $_debug = true; // change to false to stop debug mode
 	
 	/* array of color names => hex color 
 		because some svg creator uses them
@@ -231,7 +229,7 @@ class SVGTOIMAGE{
 				case 'height': $height = $value; break;
 				case 'href':
 				case 'xlink:href':$href = $value; break;
-				//case 'r' : $r = $value; break; // no !
+				//case 'r' : $r = $value; break; // no, use transform instead !
 				case 'transform': $transform = $value;
 				case 'style' : if(strripos($value, 'display: none') || strripos($value, 'display:none')) return; break;
 			}
@@ -279,13 +277,13 @@ class SVGTOIMAGE{
 		}
 		$newWidth = imagesx($newImage);
 		$newHeight = imagesy($newImage);
-		//imagecopy($this->_image,$newImage,$x,$y,0,0, $width , $height);
-		imagecopy($this->_image,$newImage,($newWidth == $width) ? $x : $x-($newWidth-$width)/2,($newHeight == $height) ? $y : $y-($newHeight-$height)/2,0,0,imagesx($newImage) , imagesy($newImage));
+
+		imagecopy($this->_image,$newImage,($newWidth == $width) ? $x : $x-($newWidth-$width)/2,($newHeight == $height) ? $y : $y-($newHeight-$height)/2,0,0,imagesx($newImage) , imagesy($newImage)); // Thanks Raphael & GD for saying things wrong.
 	}
 
 	/*
 	 * Check if the given SVG xml is W3C valid
-	 * DEPRECATED
+	 * DEPRECATED and unused anymore
 	 * @param string <svg>...</svg>
 	 * @return boolean
 	 */
@@ -665,9 +663,15 @@ class SVGTOIMAGE{
 		if($this->_showDesc && $this->_desc != null) $this->_parseDescription($this->_desc);
 		//imagefilter ( $this->_image , IMG_FILTER_SMOOTH, 6);
 		switch($format){
+			case 'gif' :
+				header("Content-type: " . image_type_to_mime_type(IMAGETYPE_GIF));
+				return imagegif($this->_image, $path);
+			case 'jpg':
+				header("Content-type: " . image_type_to_mime_type(IMAGETYPE_JPEG));
+				return imagejpeg($this->_image, $path);
 			case 'png' :
 			default :
-				//header('Content-type: image/png');
+				header("Content-type: " . image_type_to_mime_type(IMAGETYPE_PNG));
 				return imagepng($this->_image, $path);
 		}
 	}

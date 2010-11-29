@@ -39,5 +39,5 @@ $svgtoimage = SVGTOIMAGE::parse($svg);
 $svgtoimage->setShowDesc();
 $svgtoimage->setWidth(300);
 $svgtoimage->setHeight(512);
-header('Content-type: image/png');
+//header('Content-type: image/png');
 echo $svgtoimage->toImage();
