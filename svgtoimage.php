@@ -421,11 +421,10 @@ class SVGTOIMAGE{
 		$pathArray = split('[ ,]', $path); 
 		
 		// Si le path est de format 'm 100 100 l 100 100 z' il faut recoller les morceaux
-		if(array_key_exists($pathArray[0], $this->pathType)){
-			reset($pathArray);
+		if(array_key_exists(strtolower($pathArray[0]), $this->pathType)){
 			$j = 0;
 			do{
-				if(array_key_exists($pathArray[$j], $this->pathType)){
+				if(array_key_exists(strtolower($pathArray[$j]), $this->pathType)){
 					$pathArray[$j] = $pathArray[$j].$pathArray[$j+1];
 					$pathArray[$j+1] = '~';
 					$j++;
@@ -549,12 +548,12 @@ class SVGTOIMAGE{
 		$colorStroke = $this->_allocateColor((string)$stroke);
 		$colorFill = $this->_allocateColor((string)$fill);
 		
-		if($fill == ''){
-			imagearc($this->_image , $x , $y , $r*2 , $r*2,0,359.9, $colorStroke );
-			//imageellipse ($this->_image , $x , $y , $r*2 , $r*2, $colorStroke );
-		}else{
-			
+		if($fill != ''){
 			imagefilledarc($this->_image , $x , $y , $r*2 , $r*2 ,0,359.9, $colorFill, IMG_ARC_PIE );
+			//imageellipse ($this->_image , $x , $y , $r*2 , $r*2, $colorStroke );
+		}
+		if($stroke !=''){
+			imagearc($this->_image , $x , $y , $r*2 , $r*2,0,359.9, $colorStroke );			
 		}
 		imagecolordeallocate( $this->_image, $colorStroke);
 		imagecolordeallocate( $this->_image, $colorFill);
@@ -641,10 +640,11 @@ class SVGTOIMAGE{
 		
 		if($this->_debug && !$thickness) $this->_log->error('Erreur dans la mise en place de l\'épaisseur du trait');
 		if($this->_debug) $this->_log->message('Rectangle - x : '.$x.' - y : '.$y.' - width : '.$width.' - height : '.$height.' - fill : '.$colorFill[0].'-'.$colorFill[1].'-'.$colorFill[2].' - stroke : '.$colorStroke[0].'-'.$colorStroke[1].'-'.$colorStroke[2]);
-		if($fill == ''){
-			imagerectangle($this->_image , $x , $y , $x+$width , $y+$height, IMG_COLOR_STYLED); 
-		}else{
+		if($fill != ''){
 			imagefilledrectangle ($this->_image , $x , $y , $x+$width , $y+$height, $colorFill );
+		}
+		if($stroke != ''){
+			imagerectangle($this->_image , $x , $y , $x+$width , $y+$height, IMG_COLOR_STYLED); 
 		}
 		imagecolordeallocate($this->_image,$colorStroke);
 		imagecolordeallocate($this->_image,$colorFill);
@@ -680,10 +680,11 @@ class SVGTOIMAGE{
 		$thickness = imagesetthickness( $this->_image , (int)$strokeWidth );
 		if($this->_debug && !$thickness) $this->_log->error('Erreur dans la mise en place de l\'épaisseur du trait');
 		
-		if($fill == ''){
-			imagepolygon ( $this->_image , $pointArray , count($pointArray)/2 , $colorStroke );
-		}else{
+		if($fill != ''){
 			imagefilledpolygon ($this->_image , $pointArray , count($pointArray)/2 , $colorFill );
+		}
+		if($stroke != ''){
+			imagepolygon ( $this->_image , $pointArray , count($pointArray)/2 , $colorStroke );
 		}
 		imagecolordeallocate($this->_image,$colorStroke);
 		imagecolordeallocate($this->_image,$colorFill);
