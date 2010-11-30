@@ -22,6 +22,18 @@ class SVGTOIMAGE{
 	private $transparentColor = array(0,0,255);
 	public $_debug = true; // change to false to stop debug mode
 
+	/*
+	 * array of path type
+	 */
+	private $pathType = array(
+		'm'	=> 'MoveTo',
+		'l' => 'LineTo',
+		'h' => 'HorizontalLineTo',
+		'v' => 'VerticalLineTo',
+		'c'	=> 'CurveTo',
+		'z' => 'EndingLine',
+	);
+	
 	/* array of color names => hex color 
 		because some svg creator uses them
 		*/
@@ -53,7 +65,7 @@ class SVGTOIMAGE{
 	 */
 	public function __construct($svg){
 		if($this->_debug) $this->_log = new Log('log.dat');
-		if($this->_debug) $this->_log->message('Ouverture du fichier contentant : '.$svg);
+		//if($this->_debug) $this->_log->message('Ouverture du fichier contentant : '.$svg);
 		$this->_svgXML = simplexml_load_string($svg);
 	}
 	
@@ -318,8 +330,10 @@ class SVGTOIMAGE{
 	 * @return int
 	 */
 	private function _parseInt($string){
-		if(preg_match('/(\d+)/', $string, $array)) {
-			return $array[1];
+		if(preg_match('/[-]?(\d+)/', $string, $array)) {
+		//if(preg_match('/[-]?(\d+)/', $string, $array)) {
+			return $array[0];
+			//return $array[1];
 		} else {
 			return 0;
 		}
@@ -336,6 +350,30 @@ class SVGTOIMAGE{
 			if($this->_debug) $this->_log->error('Chemin erroné : '.$x1.' - '.$y1.' - '.$x2.' - '.$y2);
 		}else{
 			if($this->_debug) $this->_log->message('Chemin : '.$x1.' - '.$y1.' - '.$x2.' - '.$y2);
+		}
+	}
+	
+	/*
+	 * add a curve to the final image
+	 * @param $startX, $startY, $control1X, $control1Y, $control2X, $control2Y, $endX, $endY int position of start, controls and end points
+	 * @param imagecolorallocate color (via _allocatecolor !)
+	 * @return lots of imagesetpixel
+	 * Algorithme de http://www.dreamstube.com/post/Bezier-Curves-In-PHP!.aspx
+	 */
+	private function _drawCurve($startX, $startY, $control1X, $control1Y, $control2X, $control2Y, $endX, $endY, $color){
+		$cx=3*($control1X-$startX);
+		$bx=3*($control2X-$control1X)-$cx;
+		$ax=$endX-$startX-$cx-$bx;
+		
+		$cy=3*($control1Y-$startY);
+		$by=3*($control2Y-$control1Y)-$cy;
+		$ay=$endY-$startY-$cy-$by;
+		if($this->_debug) $this->_log->message('ax : '.$ax.', ay : '.$ay);
+		for($t=0; $t<1; $t+=.01)
+		{
+			$xt = $ax * $t * $t * $t + $bx * $t * $t + $cx * $t + $startX;
+			$yt = $ay * $t * $t * $t + $by * $t * $t + $cy * $t + $startY;
+			imagesetpixel ( $this->_image , $xt , $yt , $color );
 		}
 	}
 	
@@ -362,7 +400,7 @@ class SVGTOIMAGE{
 				case 'style' : if(strripos($value, 'display: none') || strripos($value, 'display:none')) return; break;
 			}
 		}
-		if(substr($path, 0,1) != 'M' && !is_numeric(substr($path, 0,1))){
+		if(strtolower(substr($path, 0,1)) != 'm' && !is_numeric(substr($path, 0,1))){
 			if($this->_debug) $this->_log->error('Mauvais path rencontré : '.$path);
 			return;
 		}
@@ -380,7 +418,31 @@ class SVGTOIMAGE{
 			
 		$lastOpe = '';
 		
-		$pathArray = split('[ ,]', $path); //explode(' ', $path);
+		$pathArray = split('[ ,]', $path); 
+		
+		// Si le path est de format 'm 100 100 l 100 100 z' il faut recoller les morceaux
+		if(array_key_exists($pathArray[0], $this->pathType)){
+			reset($pathArray);
+			$j = 0;
+			do{
+				if(array_key_exists($pathArray[$j], $this->pathType)){
+					$pathArray[$j] = $pathArray[$j].$pathArray[$j+1];
+					$pathArray[$j+1] = '~';
+					$j++;
+					$newNb = count($pathArray);
+					for($k = $j; $k<=$newNb; $k++){
+						$pathArray[$k] = $pathArray[$k+1];
+					}
+				}else{
+					if($pathArray[$j] == '' || $pathArray[$j] == null)
+						unset($pathArray[$j]);
+					$j++;
+				}
+			}while(isset($pathArray[$j]));
+			if($this->_debug) $this->_log->message('Path reconstruit ! '.implode(', ',$pathArray));
+		}
+		
+		
 		$nbArray = count($pathArray);
 		$nbLine = (($nbArray-1)/2)-1;
 
@@ -389,110 +451,63 @@ class SVGTOIMAGE{
 		$lastY = 0;
 		while ($i < $nbArray) {
 			// Changement de départ
-			if(substr($pathArray[$i], 0, 1) == 'M'){
+			if(strtolower(substr($pathArray[$i], 0, 1)) == 'm'){
 				$lastX = $this->_parseInt($pathArray[$i]);
 				$lastY = $this->_parseInt($pathArray[$i+1]);
-				$lastOpe = 'M';
+				$lastOpe = 'm';
 				$i=$i+2;
-
-			}elseif(substr($pathArray[$i], 0, 1) == 'L'){
+			// Ligne
+			}elseif(strtolower(substr($pathArray[$i], 0, 1)) == 'l' || (is_numeric($pathArray[$i]) && strtolower($lastOpe) == 'l')){
 				$newX = $this->_parseInt($pathArray[$i]);
 				$newY = $this->_parseInt($pathArray[$i+1]);
 				$this->_drawLine($lastX , $lastY , $newX , $newY , IMG_COLOR_STYLED);
-				$lastOpe = 'L';
+				$lastOpe = 'l';
 				$lastX = $newX;
 				$lastY = $newY;
 				$i=$i+2;
-
-			}elseif(substr($pathArray[$i], 0, 1) == 'H'){
+			// Ligne horizontale
+			}elseif(strtolower(substr($pathArray[$i], 0, 1)) == 'h' || (is_numeric($pathArray[$i]) && strtolower($lastOpe) == 'h')){
 				$newX = $this->_parseInt($pathArray[$i]);
 				$this->_drawLine($lastX , $lastY , $newX , $lastY , IMG_COLOR_STYLED);
-				$lastOpe = 'H';
+				$lastOpe = 'h';
 				$lastX = $newX;
 				$i++;
-
-			}elseif(substr($pathArray[$i], 0, 1) == 'V'){
+			// Ligne verticale
+			}elseif(strtolower(substr($pathArray[$i], 0, 1)) == 'v' || (is_numeric($pathArray[$i]) && strtolower($lastOpe) == 'v')){
 				$newY = $this->_parseInt($pathArray[$i]);
 				$this->_drawLine($lastX , $lastY , $lastX , $newY , IMG_COLOR_STYLED);
 				$lastY = $newY;
-				$lastOpe = 'V';
+				$lastOpe = 'v';
 				$i++;
-
-			}elseif(substr($pathArray[$i], 0, 1) == 'C'){
-				
+			// Courbe
+			}elseif(strtolower(substr($pathArray[$i], 0, 1)) == 'c' || (is_numeric($pathArray[$i]) && strtolower($lastOpe) == 'c')){
 				$control1x = $this->_parseInt($pathArray[$i]);
 				$control1y = $this->_parseInt($pathArray[$i+1]);
 				$control2x = $this->_parseInt($pathArray[$i+2]);
 				$control2y = $this->_parseInt($pathArray[$i+3]);
 				$newX = $this->_parseInt($pathArray[$i+4]);
 				$newY = $this->_parseInt($pathArray[$i+5]);
+				if($this->_debug) $this->_log->message('Drawing curve : '.$lastX.' - '.$lastY.' - '.$control1x.' - '.$control1y.' - '.$control2x.' - '.$control2y.' - '.$newX.' - '.$newY);
 				
-				// Algorithme de http://www.dreamstube.com/post/Bezier-Curves-In-PHP!.aspx ne fonctionne pas !
-				$cx=3*($control1x-$lastX);
-				$bx=3*($control2x-$control1x)-$cx;
-				$ax=$newX-$lastX-$cx-$bx;
-			
-				$cy=3*($control1y-$lastY);
-				$by=3*($control2y-$control1y)-$cy;
-				$ay=$newY-$lastY-$cy-$by;
-				if($this->_debug) $this->_log->message('ax : '.$ax.', ay : '.$ay);
-				$function_x='('.$ax.')*$t*$t*$t+('.$bx.')*$t*$t+('.$cx.')*$t+'.$lastX;
-				$function_y='('.$ay.')*$t*$t*$t+('.$by.')*$t*$t+('.$cy.')*$t+'.$lastY;
-				$function_z=2;
-				$j=0;
-				for($t=0; $t<1; $t+=.01)
-				{
-					eval('$x_points[$j]=1*'.$function_x.';');
-					eval('$y_points[$j]=1*'.$function_y.';');
-					eval('$z_points[$j]=1*'.$function_z.';');
-					if($this->_debug) $this->_log->message('cx : '.$x_points[$j].', cy : '.$y_points[$j]*(-1).' d: '.$z_points[$j]);
-					imagearc($this->_image, $x_points[$j]+$this->_getImageWidth()/2, ($y_points[$j]*(-1))+$this->_getImageHeight()/2, $z_points[$j], $z_points[$j], 0, 360, $colorStroke);
-					$j++;	
-				}
+				$this->_drawCurve($lastX, $lastY, $control1x, $control1y, $control2x, $control2y, $newX, $newY, IMG_COLOR_STYLED);
+				
 				$lastX = $newX;
 				$lastY = $newY;
+				$lastOpe = 'c';
 				$i=$i+6;
-			}elseif(is_numeric(substr($pathArray[$i], 0, 1))){
-				switch($lastOpe){
-					case 'L': 
-						$newX = $this->_parseInt($pathArray[$i]);
-						$newY = $this->_parseInt($pathArray[$i+1]);
-						$this->_drawLine($lastX , $lastY , $newX , $newY , IMG_COLOR_STYLED);
-						$lastX = $newX;
-						$lastY = $newY;
-						$i=$i+2; 
-						break;
-					case 'H': 
-						$newX = $this->_parseInt($pathArray[$i]);
-						$this->_drawLine($lastX , $lastY , $newX , $lastY , IMG_COLOR_STYLED);
-						$lastX = $newX;
-						$i++;
-				 		break;
-					case 'V': 
-						$newY = $this->_parseInt($pathArray[$i]);
-						$this->_drawLine($lastX , $lastY , $lastX , $newY , IMG_COLOR_STYLED);
-						$lastY = $newY;
-						$i++;
-						break;
-					case 'Z': 
-						if($this->_debug) $this->_log->error('2 bouclages dans une boucle'); 
-						$i++;
-						break;
-					default : //polyline
-						if($this->_debug) $this->_log->error('last opé inconnue '.$lastOpe); 
-						$lastX = $this->_parseInt($pathArray[$i]);
-						$lastY = $this->_parseInt($pathArray[$i+1]);
-						$lastOpe = 'L';
-						$i=$i+2; 
-						break;
-				}
-
-			}elseif(substr($pathArray[$i], 0, 1) == 'Z'){
+			// Dernière ligne droite
+			}elseif(strtolower(substr($pathArray[$i], 0, 1)) == 'z' || (is_numeric(substr($pathArray[$i], 0, 1)) && strtolower($lastOpe) == 'z')){
+				if($lastOpe == 'z' && $this->_debug) $this->_log->error('2 bouclages dans une boucle'); 
 				$this->_drawLine($lastX , $lastY , $this->_parseInt($pathArray[0]) , $this->_parseInt($pathArray[1]) , IMG_COLOR_STYLED);
-				$lastOpe = 'Z'; //utile?
+				$lastOpe = 'z'; //utile?
 				$i++;
-			}else 
-				$i++; // au cas où pour éviter une boucle infinie.
+			// Polyline
+			}else{ 
+				$lastX = $this->_parseInt($pathArray[$i+2]);
+				$lastY = $this->_parseInt($pathArray[$i+3]);
+				$lastOpe = 'l'; // s'il n'a aucune lettre, c'est une polyline, donc des... lignes.
+				$i=$i+2; 
+			}
 			if($this->_debug) $this->_log->message('counter :'.$i);
 		}
 		imagecolordeallocate( $this->_image, $colorStroke);
@@ -732,6 +747,7 @@ class SVGTOIMAGE{
 	public function toImage($format = 'png', $path = null){
 		$writeDesc = null;
 		$this->_image = imagecreatetruecolor($this->_getImageWidth(), $this->_getImageHeight());
+		imagefilledrectangle($this->_image, 0, 0 , $this->_getImageWidth(), $this->_getImageHeight(), $this->_allocateColor('white'));
 		imagealphablending($this->_image, true);
 		//imageantialias($this->_image, true); // On ne peut pas gérer l'épaisseur des traits si l'antialiasing est activé... lol ?
 		foreach($this->_svgXML->children() as $element){
