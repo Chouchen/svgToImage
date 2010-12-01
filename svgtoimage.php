@@ -1,7 +1,6 @@
 <?
 // TODO
 // prendre en compte l'opacité grâce à imagecolorallocatealpha ?
-// pour les rectangles avec point ou tiret http://fr.php.net/manual/fr/function.imagesetstyle.php
 // ajout de title
 // ajout de <text fill="#000000" x="541" y="258" transform="rotate(-0, 541, 258)" font-size="10" font-family="SansSerif" font-style="normal" font-weight="normal">0</text>
 
@@ -160,7 +159,10 @@ class SVGTOIMAGE{
 		}
 	}
 	
-	/* return width and height from the SVG */
+	/* 
+	 * DEPRECATED
+	 * return width and height from the SVG 
+	 */
 	private function _getImageSize(){
 		$imageSize = array();
 		$imageSize['width'] = $this->_svgXML->attributes()->width;
@@ -262,7 +264,18 @@ class SVGTOIMAGE{
 				case 'xlink:href':$href = $value; break;
 				//case 'r' : $r = $value; break; // no, use transform instead !
 				case 'transform': $transform = $value;
-				case 'style' : if(strripos($value, 'display: none') || strripos($value, 'display:none')) return; break;
+				case 'style' : 
+					$allStyle = split('[;:]', $value);
+					$i = 0;
+					while ($i < count($allStyle)) {
+						if($allStyle[$i] == 'display' && $allStyle[$i+1] == 'none') return;
+						if($allStyle[$i] == 'fill') $fill = $allStyle[$i+1]; 
+						if($allStyle[$i] == 'stroke') $stroke = $allStyle[$i+1]; 
+						if($allStyle[$i] == 'stroke-width') $strokeWidth = $allStyle[$i+1]; 
+						$i=$i+2;
+					}
+					//if(strripos($value, 'display: none') || strripos($value, 'display:none')) return; 
+					break;
 			}
 		}
 		if($transform != ''){
@@ -397,7 +410,17 @@ class SVGTOIMAGE{
 				case 'fill': $fill = ($value == 'none') ? '' : $value; break;
 				case 'stroke-width' : $strokeWidth = $value; break;
 				case 'stroke-dasharray' : $strokeDasharray = $value; break;
-				case 'style' : if(strripos($value, 'display: none') || strripos($value, 'display:none')) return; break;
+				$allStyle = split('[;:]', $value);
+					$i = 0;
+					while ($i < count($allStyle)) {
+						if($allStyle[$i] == 'display' && $allStyle[$i+1] == 'none') return;
+						if($allStyle[$i] == 'fill') $fill = $allStyle[$i+1]; 
+						if($allStyle[$i] == 'stroke') $stroke = $allStyle[$i+1]; 
+						if($allStyle[$i] == 'stroke-width') $strokeWidth = $allStyle[$i+1]; 
+						$i=$i+2;
+					}
+					//if(strripos($value, 'display: none') || strripos($value, 'display:none')) return; 
+					break;
 			}
 		}
 		if(strtolower(substr($path, 0,1)) != 'm' && !is_numeric(substr($path, 0,1))){
@@ -448,11 +471,15 @@ class SVGTOIMAGE{
 		$i = 0;
 		$lastX = 0;
 		$lastY = 0;
+		$lastMX = 0;
+		$lastMY = 0;
 		while ($i < $nbArray) {
 			// Changement de départ
 			if(strtolower(substr($pathArray[$i], 0, 1)) == 'm'){
 				$lastX = $this->_parseInt($pathArray[$i]);
+				$lastMX = $this->_parseInt($pathArray[$i]);
 				$lastY = $this->_parseInt($pathArray[$i+1]);
+				$lastMY = $this->_parseInt($pathArray[$i+1]);
 				$lastOpe = 'm';
 				$i=$i+2;
 			// Ligne
@@ -497,8 +524,8 @@ class SVGTOIMAGE{
 			// Dernière ligne droite
 			}elseif(strtolower(substr($pathArray[$i], 0, 1)) == 'z' || (is_numeric(substr($pathArray[$i], 0, 1)) && strtolower($lastOpe) == 'z')){
 				if($lastOpe == 'z' && $this->_debug) $this->_log->error('2 bouclages dans une boucle'); 
-				$this->_drawLine($lastX , $lastY , $this->_parseInt($pathArray[0]) , $this->_parseInt($pathArray[1]) , IMG_COLOR_STYLED);
-				$lastOpe = 'z'; //utile?
+				$this->_drawLine($lastX , $lastY , $lastMX , $lastMY , IMG_COLOR_STYLED);
+				$lastOpe = 'z';
 				$i++;
 			// Polyline
 			}else{ 
@@ -624,7 +651,19 @@ class SVGTOIMAGE{
 				case 'stroke': $stroke = $value; break;
 				case 'stroke-width' : $strokeWidth = $value; break;
 				case 'stroke-dasharray' : $strokeDasharray = $value; break;
-				case 'style' : if(strripos($value, 'display: none') || strripos($value, 'display:none')) return; break;
+				//case 'style' : if(strripos($value, 'display: none') || strripos($value, 'display:none')) return; break;
+				case 'style' : 
+					$allStyle = split('[;:]', $value);
+					$i = 0;
+					while ($i < count($allStyle)) {
+						if($allStyle[$i] == 'display' && $allStyle[$i+1] == 'none') return;
+						if($allStyle[$i] == 'fill') $fill = $allStyle[$i+1]; 
+						if($allStyle[$i] == 'stroke') $stroke = $allStyle[$i+1]; 
+						if($allStyle[$i] == 'stroke-width') $strokeWidth = $allStyle[$i+1]; 
+						$i=$i+2;
+					}
+					//if(strripos($value, 'display: none') || strripos($value, 'display:none')) return; 
+					break;
 			}
 		}
 		if($width == 0 || $height == 0)
@@ -669,7 +708,17 @@ class SVGTOIMAGE{
 				case 'fill': $fill = ($value == 'none') ? '' : $value; break;
 				case 'stroke': $stroke = $value; break;
 				case 'stroke-width' : $strokeWidth = $value; break;
-				case 'style' : if(strripos($value, 'display: none') || strripos($value, 'display:none')) return; break;
+				$allStyle = split('[;:]', $value);
+					$i = 0;
+					while ($i < count($allStyle)) {
+						if($allStyle[$i] == 'display' && $allStyle[$i+1] == 'none') return;
+						if($allStyle[$i] == 'fill') $fill = $allStyle[$i+1]; 
+						if($allStyle[$i] == 'stroke') $stroke = $allStyle[$i+1]; 
+						if($allStyle[$i] == 'stroke-width') $strokeWidth = $allStyle[$i+1]; 
+						$i=$i+2;
+					}
+					//if(strripos($value, 'display: none') || strripos($value, 'display:none')) return; 
+					break;
 			}
 		}
 		if($points == '')
