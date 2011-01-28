@@ -575,7 +575,7 @@ class SVGTOIMAGE{
 		$colorStroke = $this->_allocateColor((string)$stroke);
 		$colorFill = $this->_allocateColor((string)$fill);
 		
-		if($fill != ''){
+		if($fill != '' || ($fill=='' && $stroke=='')){
 			imagefilledarc($this->_image , $x , $y , $r*2 , $r*2 ,0,359.9, $colorFill, IMG_ARC_PIE );
 			//imageellipse ($this->_image , $x , $y , $r*2 , $r*2, $colorStroke );
 		}
@@ -679,7 +679,7 @@ class SVGTOIMAGE{
 		
 		if($this->_debug && !$thickness) $this->_log->error('Erreur dans la mise en place de l\'épaisseur du trait');
 		if($this->_debug) $this->_log->message('Rectangle - x : '.$x.' - y : '.$y.' - width : '.$width.' - height : '.$height.' - fill : '.$colorFill[0].'-'.$colorFill[1].'-'.$colorFill[2].' - stroke : '.$colorStroke[0].'-'.$colorStroke[1].'-'.$colorStroke[2]);
-		if($fill != ''){
+		if($fill != '' || ($fill=='' && $stroke=='')){
 			imagefilledrectangle ($this->_image , $x , $y , $x+$width , $y+$height, $colorFill );
 		}
 		if($stroke != ''){
