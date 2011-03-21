@@ -387,7 +387,7 @@ class SVGTOIMAGE{
 		for($i=0;$i<$empty;$i++){
 			$tiret[] = IMG_COLOR_TRANSPARENT;
 		}
-		if($this->_debug) $this->_log->message('nouveaux tirets : '.Log::decode($tiret));
+		//if($this->_debug) $this->_log->message('nouveaux tirets : '.Log::decode($tiret));
 		return $tiret;
 	}
 	
@@ -686,12 +686,12 @@ class SVGTOIMAGE{
 	}
 	/*END OF EXPERIMENT*/
 	
-	private function _drawPolygon($polygon, $stroke, $fill = ''){
+	private function _drawPolygon($polygon, $stroke = '', $fill = ''){
 		//if($this->_debug) $this->_log->message('_drawPolygon : fill : '.$fill.' stroke:'.$stroke);
 		if($fill !== '' && count($polygon) >= 6){
 			//if($this->_debug) $this->_log->message('polygon rempli : '.$fill);
 			imagefilledpolygon($this->_image,$polygon,count($polygon)/2,$fill);
-			imagepolygon($this->_image, $polygon, count($polygon)/2, $stroke);
+			if($stroke != '') imagepolygon($this->_image, $polygon, count($polygon)/2, $stroke);
 		}elseif(count($polygon) >= 6){
 			//if($this->_debug) $this->_log->message('polygon non rempli : '.$stroke);
 			imagepolygon($this->_image, $polygon, count($polygon)/2, $stroke);
@@ -726,7 +726,7 @@ class SVGTOIMAGE{
 		if($this->_debug && !$thickness) $this->_log->error('Erreur dans la mise en place de l\'épaisseur du trait');
 		else $this->_log->message('épaisseur du trait à : '.$this->_parseInt($strokeWidth));
 		
-		$colorStroke = $stroke != '' ? $this->_allocateColor($stroke) : $this->_allocateColor('black');
+		$colorStroke = $stroke != '' ? $this->_allocateColor($stroke) : $fill === '' ? $this->_allocateColor('black') : '';
 		$colorFill = $fill != '' ? $this->_allocateColor($fill) : '';
 		
 		if($this->_debug) $this->_log->message('colors ! fill:'.$colorFill.'stroke:'.$colorStroke);
@@ -935,18 +935,36 @@ class SVGTOIMAGE{
 		$fontFamily = 'SansSerif';
 		$fontStyle = 'normal';
 		$fontWeight = 'normal';
+		
 		extract($this->_getParams($textNode));
 		
+		//case translation
 		if($this->_getParam('originX') !== null){
 			$x += $this->_getParam('originX');
 		}
 		if($this->_getParam('originY') !== null){
 			$y += $this->_getParam('originY');
 		}
+		//end translation
+		//case rotation
+		if($this->_getParam('rotate') !== null){
+			$r = $this->_getParam('rotate');
+		}
+		//end rotation
+		//case scale
+		if($this->_getParam('scale') !== null) $fontSize *= ($this->_getParam('scale') -1);
+		//end scale
+		
 		if($textNode == '')
 			return;
 		$colorStroke = $this->_allocateColor((string)$fill);
-		imagestring ( $this->_image , 2 , $x , $y , rtrim($textNode) , $fill );
+		
+		$fontfile = file_exists('fonts/'.strtolower($fontFamily).'.ttf') ? 'fonts/'.strtolower($fontFamily).'.ttf' : 'fonts/arial.ttf';
+		
+		if($this->_debug) $this->_log->message('text '.rtrim($textNode).' avec typo :'.$fontfile.' de taille '.$fontSize);
+		if($this->_debug) $this->_log->message('text avec rotation : '.$r);
+		//imagestring ( $this->_image , 2 , $x , $y , rtrim($textNode) , $fill );
+		imagettftext ( $this->_image , (double)$fontSize , $r , $x , $y , $colorStroke , $fontfile , rtrim($textNode) );
 		imagecolordeallocate( $this->_image, $colorStroke);
 	}
 	
@@ -1024,9 +1042,9 @@ class SVGTOIMAGE{
 		//end rotation
 		//case scale
 		if($this->_getParam('scale') !== null){
-			$xrapport = ($x2 - $x1) / $this->_getParam('scale');
+			$xrapport = ($x2 - $x1) * ($this->_getParam('scale') -1);
 			$x2 += $xrapport;
-			$yrapport = ($y2 - $y1) / $this->_getParam('scale');
+			$yrapport = ($y2 - $y1) * ($this->_getParam('scale') -1);
 			$y2 += $yrapport;
 			if($this->_debug) $this->_log->message('scale by '.Log::decode($this->_getParam('scale')).':'.Log::decode($xrapport).' - '.Log::decode($yrapport));
 		}
