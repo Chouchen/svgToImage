@@ -3,8 +3,6 @@
 // prendre en compte l'opacité grâce à imagecolorallocatealpha ?
 // ajout de title
 // ajout de <text fill="#000000" x="541" y="258" transform="rotate(-0, 541, 258)" font-size="10" font-family="SansSerif" font-style="normal" font-weight="normal">0</text>
-// refaire path en GROS polygon
-
 
 include 'log.php';
 
@@ -19,7 +17,7 @@ class SVGTOIMAGE{
 	protected $_height;
 	protected $_showDesc = false;
 	protected $_desc;
-	protected $_currentOptions;
+	protected $_currentOptions = array();
 	private $transparentColor = array(0,0,255);
 	public $_debug = true; // change to false to stop debug mode
 
@@ -187,50 +185,28 @@ class SVGTOIMAGE{
 		'whitesmoke'=>array(245, 245, 245),
 		'yellow'=>array(255, 255, 0),
 		'yellowgreen'=>array(154, 205, 50)
-		/*'black'			=> '#000000',
-		'red'			=> '#FF0000',
-		'white'			=> '#FFFFFF',
-		'turquoise' 	=> '#00FFFF',
-		'grey' 			=> '#CCCCCC',
-		'light grey'	=> '#C0C0C0',
-		'light blue'	=> '#0000FF',
-		'dark grey'		=> '#808080',
-		'dark blue'		=> '#0000A0',
-		'light purple' 	=> '#FF0080',
-		'orange'		=> '#FF8040',
-		'dark purple' 	=> '#800080',
-		'brown'			=> '#804000',
-		'yellow'		=> '#FFFF00',
-		'burgundy'		=> '#800000',
-		'pastel green'	=> '#00FF00',
-		'forest green'	=> '#808000',
-		'pink'			=> '#FF00FF',
-		'grass green'	=> '#408080',*/
 	);
 	
-	/*
+	/**
 	 * constructor
 	 * parse the svg with simplexml
 	 */
 	public function __construct($svg){
 		if($this->_debug) $this->_log = new Log('log.dat');
-		//if($this->_debug) $this->_log->message('Ouverture du fichier contentant : '.$svg);
 		$this->_svgXML = simplexml_load_string($svg);
 	}
 	
-	/*
+	/**
 	 * Construct with a file
 	 * @param : string path to the file
 	 * @return : instance of this class
 	 */
 	public static function load($file){
-		$log = new Log('load.dat');
-		$log->message('loading : '.$file);
 		$svg = file_get_contents($file);
 		return new SVGTOIMAGE($svg);
 	}
 	
-	/*
+	/**
 	 * Construct with a string
 	 * @param : string <svg>...</svg>
 	 * @return : instance of this class
@@ -239,33 +215,33 @@ class SVGTOIMAGE{
 		return new SVGTOIMAGE($xml);
 	}
 	
-	/*
+	/**
 	 * Destroy the GD Image when finished
 	 */
 	public function __destruct(){
 		imagedestroy($this->_image);
 	}
 	
-	/*
+	/**
 	 * setter - option : show the description from the svg into the image if present
 	 * @param boolean
 	 */
 	public function setShowDesc($showDesc = true){
 		if(is_bool($showDesc)){
-			if($this->_debug) $this->_log->message('Passage de showDesc en '.$showDesc);
+			//if($this->_debug) $this->_log->message('Passage de showDesc en '.$showDesc);
 			$this->_showDesc = $showDesc;
 		}else{
 			if($this->_debug) $this->_log->error('Erreur dans la fonction showDesc, doit recevoir booléen, a reçu : '.$showDesc);
 		}
 	}
 	
-	/*
+	/**
 	 * setter - option : origin of the final image from the svg (default : 0)
 	 * @param int
 	 */
 	public function setX($x){
 		if(is_int($x)){
-			if($this->_debug) $this->_log->message('Passage de x en '.$x);
+			//if($this->_debug) $this->_log->message('Passage de x en '.$x);
 			$this->_x = $x;
 		}else{
 			if($this->_debug) $this->_log->error('Erreur dans la fonction setX, doit recevoir int, a reçu : '.$x);
@@ -278,7 +254,7 @@ class SVGTOIMAGE{
 	 */
 	public function setY($y){
 		if(is_int($y)){
-			if($this->_debug) $this->_log->message('Passage de y en '.$y);
+			//if($this->_debug) $this->_log->message('Passage de y en '.$y);
 			$this->_y = $y;
 		}else{
 			if($this->_debug) $this->_log->error('Erreur dans la fonction setY, doit recevoir int, a reçu : '.$y);
@@ -291,7 +267,7 @@ class SVGTOIMAGE{
 	 */
 	public function setWidth($width){
 		if(is_int($width)){
-			if($this->_debug) $this->_log->message('Passage de width en '.$width);
+			//if($this->_debug) $this->_log->message('Passage de width en '.$width);
 			$this->_width = $width;
 		}else{
 			if($this->_debug) $this->_log->error('Erreur dans la fonction setWidth, doit recevoir int, a reçu : '.$width);
@@ -304,7 +280,7 @@ class SVGTOIMAGE{
 	 */
 	public function setHeight($height){
 		if(is_int($height)){
-			if($this->_debug) $this->_log->message('Passage de height en '.$height);
+			//if($this->_debug) $this->_log->message('Passage de height en '.$height);
 			$this->_height = $height;
 		}else{
 			if($this->_debug) $this->_log->error('Erreur dans la fonction setHeight, doit recevoir int, a reçu : '.$height);
@@ -319,7 +295,7 @@ class SVGTOIMAGE{
 		$imageSize = array();
 		$imageSize['width'] = $this->_svgXML->attributes()->width;
 		$imageSize['height'] = $this->_svgXML->attributes()->height;
-		if($this->_debug) $this->_log->message('taille de l\'image : largeur : '.$imageSize['width'].' - longueur : '.$imageSize['height']);
+		if($this->_debug) $this->_log->message('taille de l\'image : '.Log::decode($imageSize));
 		return $imageSize;
 	}
 	
@@ -343,14 +319,14 @@ class SVGTOIMAGE{
 		}
 	}
 	
-	/*
+	/**
 	 * @return int final image width
 	 */
 	private function _getImageWidth(){
 		return isset($this->_width) ? $this->_width : $this->_getSizeType($this->_svgXML->attributes()->width);
 	}
 	
-	/*
+	/**
 	 * @return int final image height
 	 */
 	private function _getImageHeight(){
@@ -363,15 +339,14 @@ class SVGTOIMAGE{
 	 */
 	private function _parseColor($colorCode){	
 		if(is_string($colorCode) && strlen($colorCode) == 7){
-			if($this->_debug) $this->_log->message('Parse Color '.$colorCode);
-			return array(
+			$convert = array(
 				base_convert(substr($colorCode, 1, 2), 16, 10),
 				base_convert(substr($colorCode, 3, 2), 16, 10),
 				base_convert(substr($colorCode, 5, 2), 16, 10),
 			);
+			return $convert;
 		}
 		if(is_string($colorCode) && strlen($colorCode) == 4){
-			if($this->_debug) $this->_log->message('Parse Color '.$colorCode);
 			return array(
 				base_convert(substr($colorCode, 1, 1).substr($colorCode, 1, 1), 16, 10),
 				base_convert(substr($colorCode, 2, 1).substr($colorCode, 2, 1), 16, 10),
@@ -381,25 +356,25 @@ class SVGTOIMAGE{
 		if(is_array($colorCode) && count($colorCode) == 3){
 			return $colorCode;		
 		}
-		if($this->_debug) $this->_log->error('Couleur mal indiquée '.$colorCode);	
+		if($this->_debug) $this->_log->error('Couleur mal indiquée '.Log::decode($colorCode));	
 		return array(0,0,0); // !#FFF || !#FFFFFF || !array(255,255,255) then black
 	}
 	
-	/*
+	/**
 	 * Allocate color to the final image thanks to _parseColor (check if the color isn't spelled directly 'black')
 	 * @param string color code
 	 * @return imageallocate on the image
 	 */
 	private function _allocateColor($color){
 		if($color != '' && array_key_exists(strtolower($color), $this->colors)){
-			$arrayColor = $this->_parseColor($this->colors[$color]);
+			$arrayColor = $this->_parseColor($this->colors[strtolower($color)]);
 		}elseif($color != ''){
 			$arrayColor = $this->_parseColor($color);
 		}else return;
 		return imagecolorallocate( $this->_image, $arrayColor[0], $arrayColor[1], $arrayColor[2] );
 	}
 	
-	/*
+	/**
 	 * return an array to use with imagesetstyle 
 	 * @param allocatecolorimage 
 	 * @return array 
@@ -412,8 +387,20 @@ class SVGTOIMAGE{
 		for($i=0;$i<$empty;$i++){
 			$tiret[] = IMG_COLOR_TRANSPARENT;
 		}
-		if($this->_debug) $this->_log->message('nouveaux tirets : '.implode('-', $tiret));
+		if($this->_debug) $this->_log->message('nouveaux tirets : '.Log::decode($tiret));
 		return $tiret;
+	}
+	
+	private function _getParam($paramName){
+		$currentOptions = $this->_getAllParams();
+		return isset($currentOptions[$paramName]) ? $currentOptions[$paramName] : null;
+	}
+	
+	private function _getAllParams(){
+		$newarr = array();
+		foreach($this->_currentOptions as $array)
+			$newarr = array_merge($newarr, $array);
+		return $newarr;
 	}
 	
 	/**
@@ -421,7 +408,7 @@ class SVGTOIMAGE{
 	 * @return array options
 	 */
 	private function _getParams($element){
-		$options = $this->_currentOptions;
+		$options = $this->_getAllParams();
 		foreach($element->attributes() as $name => $value){
 			switch($name){
 				case 'x': 
@@ -439,17 +426,6 @@ class SVGTOIMAGE{
 					break;
 				case 'xlink:href':
 					$options['href'] = $value; 
-					break;
-				case 'style' : 
-					$allStyle = split('[;:]', $value);
-					$i = 0;
-					while ($i < count($allStyle)) {
-						if($allStyle[$i] == 'display' && $allStyle[$i+1] == 'none') return; // display:none? Stop looking for info
-						if($allStyle[$i] == 'fill') $options['fill'] = $allStyle[$i+1]; 
-						if($allStyle[$i] == 'stroke') $options['stroke'] = $allStyle[$i+1]; 
-						if($allStyle[$i] == 'stroke-width') $options['strokeWidth'] = $allStyle[$i+1]; 
-						$i=$i+2;
-					}
 					break;
 				case 'd': 
 				case 'points': 
@@ -476,15 +452,53 @@ class SVGTOIMAGE{
 				case 'font-weight': 
 					$options['fontWeight'] = $value; 
 					break;
+				case 'transform': // transform="matrix(1.006896,0,0,1.006896,0.3043,-0.708342)"
+					$transform = split('[()]', $value);
+					if(count($transform) == 3){
+						$typeTransform = $transform[0];
+						switch($typeTransform){
+							case 'translate':
+								list($options['originX'], $options['originY']) = explode(',', $transform[1]);
+								break;
+							case 'rotate':
+								$options['rotate'] = $transform[1];
+								break;
+							case 'scale':
+								$options['scale'] = $transform[1];
+								break;
+							default:
+								break;
+						}
+					}
+					break;
+				case 'style' : 
+					$allStyle = split('[;:]', $value);
+					$i = 0;
+					while ($i < count($allStyle)) {
+						if($allStyle[$i] == 'display' && $allStyle[$i+1] == 'none') return; // display:none? Stop looking for info
+						if($allStyle[$i] == 'fill') $options['fill'] = $allStyle[$i+1]; 
+						if($allStyle[$i] == 'stroke') $options['stroke'] = $allStyle[$i+1]; 
+						if($allStyle[$i] == 'stroke-width') $options['strokeWidth'] = $allStyle[$i+1]; 
+						$i=$i+2;
+					}
+					break;
 				default:
 					$options[$name] = $value;
 					break;				
 			}
 		}
+		/*if($this->_debug){
+			$this->_log->message('-------- option ---------');
+			foreach($options as $key => $value){
+				$this->_log->message('option : '.(string)$key.' -> '.(string)$value);
+			}		
+			$this->_log->message('------- /option/ --------');
+		}*/
+		//if($this->_debug) $this->_log->message('options : '.Log::decode($options));
 		return $options;
 	}
 	
-	/*
+	/**
 	 * add the given image from svg to the final image
 	 * @param simpleXMLElement
 	 * @return imagecopy
@@ -497,31 +511,13 @@ class SVGTOIMAGE{
 		$href = '';
 		$transform = '';
 		$r = 0;
-		/*foreach($imageNode->attributes() as $name => $value){
-			switch($name){
-				case 'x': $x = $value; break;
-				case 'y': $y = $value; break;
-				case 'width': $width = $value; break;
-				case 'height': $height = $value; break;
-				case 'href':
-				case 'xlink:href':$href = $value; break;
-				//case 'r' : $r = $value; break; // no, use transform instead !
-				case 'transform': $transform = $value;
-				case 'style' : 
-					$allStyle = split('[;:]', $value);
-					$i = 0;
-					while ($i < count($allStyle)) {
-						if($allStyle[$i] == 'display' && $allStyle[$i+1] == 'none') return;
-						if($allStyle[$i] == 'fill') $fill = $allStyle[$i+1]; 
-						if($allStyle[$i] == 'stroke') $stroke = $allStyle[$i+1]; 
-						if($allStyle[$i] == 'stroke-width') $strokeWidth = $allStyle[$i+1]; 
-						$i=$i+2;
-					}
-					//if(strripos($value, 'display: none') || strripos($value, 'display:none')) return; 
-					break;
-			}
-		}*/
 		extract($this->_getParams($imageNode));
+		//case translate
+		if($this->_getParam('originX') !== null)
+			$x += $this->_getParam('originX');
+		if($this->_getParam('originY') !== null)
+			$y += $this->_getParam('originY');
+		//end translate
 		if($transform != ''){
 			$transforms = split('[()]', $transform);
 			$nb = count($transforms);
@@ -536,7 +532,6 @@ class SVGTOIMAGE{
 		}
 		if($width == 0 || $height == 0 || $href == '')
 			return;
-		if($this->_debug) $this->_log->message('Image - x : '.$x.' - y : '.$y.' - largeur : '.$width.' - longueur : '.$height.' - url : '.$href.' - angle : '.$r);	
 		$imageTypeArray = explode('.', $href);
 		$lastElementFromImageType = count($imageTypeArray);
 		$imageType = $imageTypeArray[$lastElementFromImageType-1];
@@ -569,7 +564,7 @@ class SVGTOIMAGE{
 		imagecopy($this->_image,$newImage,($newWidth == $width) ? $x : $x-($newWidth-$width)/2,($newHeight == $height) ? $y : $y-($newHeight-$height)/2,0,0,imagesx($newImage) , imagesy($newImage)); // Thanks Raphael & GD for saying things wrong.
 	}
 
-	/*
+	/**
 	 * Check if the given SVG xml is W3C valid
 	 * DEPRECATED and unused anymore
 	 * @param string <svg>...</svg>
@@ -581,22 +576,19 @@ class SVGTOIMAGE{
 		return false;
 	}
 	
-	/*
+	
+	
+	/**
 	 * small function to find int into a string - works like java parseint
 	 * @param string containing numbers
 	 * @return int
 	 */
 	private function _parseInt($string){
-		if(preg_match('/[-]?(\d+)/', $string, $array)) {
-		//if(preg_match('/[-]?(\d+)/', $string, $array)) {
-			return $array[0];
-			//return $array[1];
-		} else {
-			return 0;
-		}
+		if(preg_match('/[-]?(\d+)/', $string, $array)) return $array[0];
+		else return 0;
 	}
 	
-	/*
+	/**
 	 * add a line to the final image
 	 * @param $x1, $y1, $x2, $y2 int position of segment
 	 * @param imagecolorallocate color (via _allocatecolor !)
@@ -610,7 +602,7 @@ class SVGTOIMAGE{
 		}
 	}
 	
-	/*
+	/**
 	 * add a curve to the final image
 	 * @param $startX, $startY, $control1X, $control1Y, $control2X, $control2Y, $endX, $endY int position of start, controls and end points
 	 * @param imagecolorallocate color (via _allocatecolor !)
@@ -690,23 +682,28 @@ class SVGTOIMAGE{
 	// Draw a Bezier curve on an image
 	private function _Bezier_drawfilled($p1,$p2,$p3,$p4,$color) {
 		$polygon = $this->_Bezier_convert($p1,$p2,$p3,$p4,0.1);
-	//	if($this->_debug) $this->_log->message('polygon : '.implode(' - ',  $polygon));
-	//	imagefilledpolygon($this->_image,$polygon,count($polygon)/2,$color);
-	// test
 		return $polygon;
 	}
 	/*END OF EXPERIMENT*/
 	
 	private function _drawPolygon($polygon, $stroke, $fill = ''){
-		if($fill != '' && count($polygon) > 6){
-			imagefilledpolygon($this->_image,$polygon,count($polygon)/2,$colorFill);
-		}elseif(count($polygon) > 6){
-			imagepolygon($this->_image, $polygon, count($polygon)/2, IMG_COLOR_STYLED);
+		//if($this->_debug) $this->_log->message('_drawPolygon : fill : '.$fill.' stroke:'.$stroke);
+		if($fill !== '' && count($polygon) >= 6){
+			//if($this->_debug) $this->_log->message('polygon rempli : '.$fill);
+			imagefilledpolygon($this->_image,$polygon,count($polygon)/2,$fill);
+			imagepolygon($this->_image, $polygon, count($polygon)/2, $stroke);
+		}elseif(count($polygon) >= 6){
+			//if($this->_debug) $this->_log->message('polygon non rempli : '.$stroke);
+			imagepolygon($this->_image, $polygon, count($polygon)/2, $stroke);
+			//imagepolygon($this->_image, $polygon, count($polygon)/2, IMG_COLOR_STYLED);
+		}elseif(count($polygon) == 4){
+			//if($this->_debug) $this->_log->message('ligne via polygon : '.$stroke);
+			$this->_drawLine($polygon[0],$polygon[1], $polygon[2],$polygon[3], $stroke);
 		}
 	}
 	
 	
-	/*
+	/**
 	 * add path/lineS/polyline whatever you name it.
 	 * @param simpleXMLElement
 	 * @return lines on the final image via _drawLine
@@ -717,27 +714,9 @@ class SVGTOIMAGE{
 		$fill = '';
 		$stroke = '';
 		$strokeDasharray = '';
-		/*foreach($pathNode->attributes() as $name=>$value){
-			switch($name){
-				case 'd': case 'points': $path = $value; break;
-				case 'stroke': $stroke = $value; break;
-				case 'fill': $fill = ($value == 'none') ? '' : $value; break;
-				case 'stroke-width' : $strokeWidth = $value; break;
-				case 'stroke-dasharray' : $strokeDasharray = $value; break;
-				$allStyle = split('[;:]', $value);
-					$i = 0;
-					while ($i < count($allStyle)) {
-						if($allStyle[$i] == 'display' && $allStyle[$i+1] == 'none') return;
-						if($allStyle[$i] == 'fill') $fill = $allStyle[$i+1]; 
-						if($allStyle[$i] == 'stroke') $stroke = $allStyle[$i+1]; 
-						if($allStyle[$i] == 'stroke-width') $strokeWidth = $allStyle[$i+1]; 
-						$i=$i+2;
-					}
-					//if(strripos($value, 'display: none') || strripos($value, 'display:none')) return; 
-					break;
-			}
-		}*/
+		
 		extract($this->_getParams($pathNode));
+		
 		if(strtolower(substr($path, 0,1)) != 'm' && !is_numeric(substr($path, 0,1))){
 			if($this->_debug) $this->_log->error('Mauvais path rencontré : '.$path);
 			return;
@@ -746,9 +725,12 @@ class SVGTOIMAGE{
 		$thickness = imagesetthickness( $this->_image , $this->_parseInt($strokeWidth) );
 		if($this->_debug && !$thickness) $this->_log->error('Erreur dans la mise en place de l\'épaisseur du trait');
 		else $this->_log->message('épaisseur du trait à : '.$this->_parseInt($strokeWidth));
-		$colorStroke = $stroke != '' ? $this->_allocateColor((string)$stroke) : $this->_allocateColor('black');
-		$colorFill = $fill != '' ? $this->_allocateColor((string)$fill) : '';
-		//$colorFill = $fill != '' ? $this->_allocateColor((string)$fill) : $this->_allocateColor('black');
+		
+		$colorStroke = $stroke != '' ? $this->_allocateColor($stroke) : $this->_allocateColor('black');
+		$colorFill = $fill != '' ? $this->_allocateColor($fill) : '';
+		
+		if($this->_debug) $this->_log->message('colors ! fill:'.$colorFill.'stroke:'.$colorStroke);
+		
 		if($strokeDasharray != ''){
 			$strokeDasharray = explode(',', $strokeDasharray);
 			imagesetstyle ( $this->_image , $this->_getDashedStroke($strokeDasharray[0], $strokeDasharray[1], $colorStroke ));
@@ -782,7 +764,7 @@ class SVGTOIMAGE{
 		
 		
 		$nbArray = count($pathArray);
-		//$nbLine = (($nbArray-1)/2)-1;
+		
 		$polyPoints = array();
 		$i = 0;
 		$lastX = 0;
@@ -864,12 +846,7 @@ class SVGTOIMAGE{
 					$newY = $lastY + $this->_parseInt($pathArray[$i+5]);
 				}
 				
-				/*EXPERIMENT $this->_drawCurve($lastX, $lastY, $control1x, $control1y, $control2x, $control2y, $newX, $newY, IMG_COLOR_STYLED);*/
-				//if($fill != ''){
 				$polyPoints = array_merge($polyPoints,$this->_Bezier_drawfilled(array($lastX, $lastY),array($control1x, $control1y),array($control2x, $control2y),array($newX, $newY),$colorFill));
-				//}else{
-				//	$this->_drawCurve($lastX, $lastY, $control1x, $control1y, $control2x, $control2y, $newX, $newY, IMG_COLOR_STYLED);
-				//}
 				
 				$lastX = $newX;
 				$lastY = $newY;
@@ -879,6 +856,8 @@ class SVGTOIMAGE{
 			}elseif(strtolower(substr($pathArray[$i], 0, 1)) == 'z' || (is_numeric(substr($pathArray[$i], 0, 1)) && strtolower($lastOpe) == 'z')){
 				if($lastOpe == 'z' && $this->_debug) $this->_log->error('2 bouclages dans une boucle'); 
 				$polyPoints = array_merge($polyPoints,array($lastX, $lastY, $lastMX, $lastMY));
+				$lastMX = $lastX;
+				$lastMY = $lastY;
 				//$this->_drawLine($lastX , $lastY , $lastMX , $lastMY , IMG_COLOR_STYLED);
 				$lastOpe = 'z';
 				$i++;
@@ -900,7 +879,7 @@ class SVGTOIMAGE{
 		imagesetstyle ( $this->_image , $this->_getDashedStroke(10, 0, $colorStroke ));
 	}
 	
-	/*
+	/**
 	 * add a circle in the final image
 	 * @param SimpleXMLElement
 	 * @return 
@@ -912,18 +891,13 @@ class SVGTOIMAGE{
 		$strokeWidth = 1;
 		$fill = '';
 		$stroke = '';
-		/*foreach($circleNode->attributes() as $name => $value){
-			switch($name){
-				case 'cx': $x = $this->_getSizeType($value); break;
-				case 'cy': $y = $this->_getSizeType($value); break;
-				case 'r': $r = $this->_getSizeType($value); break;
-				case 'fill': $fill = ($value == 'none') ? '' : $value; break;
-				case 'stroke': $stroke = $value; break;
-				case 'style' : if(strripos($value, 'display: none') || strripos($value, 'display:none')) return; break;
-				case 'stroke-width' : $strokeWidth = $value; break;
-			}
-		}*/
 		extract($this->_getParams($circleNode));
+		if($this->_getParam('originX') !== null){
+			$x += $this->_getParam('originX');
+		}
+		if($this->_getParam('originY') !== null){
+			$y += $this->_getParam('originY');
+		}
 		if($r == 0)
 			return;
 		if($this->_debug) $this->_log->message('Cercle - x : '.$x.' - y : '.$y.' - rayon : '.$r.'-'.$colorStroke[2].' - épaisseur : '.$strokeWidth);
@@ -946,7 +920,7 @@ class SVGTOIMAGE{
 		imagesetthickness ( $this->_image , 1 );
 	}
 	
-	/*
+	/**
 	 * add text in the final image <text fill="#000000" x="541" y="258" transform="rotate(-0, 541, 258)" font-size="10" font-family="SansSerif" font-style="normal" font-weight="normal">0</text>
 	 * @param SimpleXMLElement
 	 * @return 
@@ -961,26 +935,18 @@ class SVGTOIMAGE{
 		$fontFamily = 'SansSerif';
 		$fontStyle = 'normal';
 		$fontWeight = 'normal';
-		/*foreach($textNode->attributes() as $name => $value){
-			switch($name){
-				case 'x': $x = $this->_getSizeType($value); break;
-				case 'y': $y = $this->_getSizeType($value); break;
-				//case 'r': $r = $value; break; // todo
-				case 'fill': $fill = $value; break;
-				case 'font-size': $fontSize = $value; break;
-				case 'font-family': $fontFamily = $value; break;
-				case 'font-style': $fontStyle = $value; break;
-				case 'font-weight': $fontWeight = $value; break;
-			}
-		}*/
 		extract($this->_getParams($textNode));
+		
+		if($this->_getParam('originX') !== null){
+			$x += $this->_getParam('originX');
+		}
+		if($this->_getParam('originY') !== null){
+			$y += $this->_getParam('originY');
+		}
 		if($textNode == '')
 			return;
-			
 		$colorStroke = $this->_allocateColor((string)$fill);
-		
-		imagestring ( $this->_image , 2 , $x , $y , $textNode , $fill );
-		
+		imagestring ( $this->_image , 2 , $x , $y , rtrim($textNode) , $fill );
 		imagecolordeallocate( $this->_image, $colorStroke);
 	}
 	
@@ -999,34 +965,13 @@ class SVGTOIMAGE{
 		$stroke = '';
 		$strokeWidth = 1;
 		$strokeDasharray = '';
-		/*foreach($rectNode->attributes() as $name => $value){
-			switch($name){
-				// imagesetstyle  (pour dotted, dashed etc)
-				case 'x': $x = $this->_getSizeType($value); break;
-				case 'y': $y = $this->_getSizeType($value); break;
-				case 'r': $r = $this->_getSizeType($value); break;
-				case 'width': $width = $this->_getSizeType($value); break;
-				case 'height': $height = $this->_getSizeType($value); break;
-				case 'fill': $fill = ($value == 'none') ? '' : $value; break;
-				case 'stroke': $stroke = $value; break;
-				case 'stroke-width' : $strokeWidth = $value; break;
-				case 'stroke-dasharray' : $strokeDasharray = $value; break;
-				//case 'style' : if(strripos($value, 'display: none') || strripos($value, 'display:none')) return; break;
-				case 'style' : 
-					$allStyle = split('[;:]', $value);
-					$i = 0;
-					while ($i < count($allStyle)) {
-						if($allStyle[$i] == 'display' && $allStyle[$i+1] == 'none') return;
-						if($allStyle[$i] == 'fill') $fill = $allStyle[$i+1]; 
-						if($allStyle[$i] == 'stroke') $stroke = $allStyle[$i+1]; 
-						if($allStyle[$i] == 'stroke-width') $strokeWidth = $allStyle[$i+1]; 
-						$i=$i+2;
-					}
-					//if(strripos($value, 'display: none') || strripos($value, 'display:none')) return; 
-					break;
-			}
-		}*/
 		extract($this->_getParams($rectNode));
+		//case translate
+		if($this->_getParam('originX') !== null)
+			$x += $this->_getParam('originX');
+		if($this->_getParam('originY') !== null)
+			$y += $this->_getParam('originY');
+		//end translate
 		if($width == 0 || $height == 0)
 			return;
 		$colorStroke = $this->_allocateColor((string)$stroke);
@@ -1039,9 +984,10 @@ class SVGTOIMAGE{
 			imagesetstyle ( $this->_image , $this->_getDashedStroke(10, 0, $colorStroke ));
 		
 		if($this->_debug && !$thickness) $this->_log->error('Erreur dans la mise en place de l\'épaisseur du trait');
-		if($this->_debug) $this->_log->message('Rectangle - x : '.$x.' - y : '.$y.' - width : '.$width.' - height : '.$height.' - fill : '.$colorFill[0].'-'.$colorFill[1].'-'.$colorFill[2].' - stroke : '.$colorStroke[0].'-'.$colorStroke[1].'-'.$colorStroke[2]);
+
 		if($fill != '' || ($fill=='' && $stroke=='')){
 			imagefilledrectangle ($this->_image , $x , $y , $x+$width , $y+$height, $colorFill );
+			imagerectangle($this->_image , $x , $y , $x+$width , $y+$height, IMG_COLOR_STYLED); 
 		}
 		if($stroke != ''){
 			imagerectangle($this->_image , $x , $y , $x+$width , $y+$height, IMG_COLOR_STYLED); 
@@ -1052,7 +998,55 @@ class SVGTOIMAGE{
 		imagesetstyle ( $this->_image , $this->_getDashedStroke(10, 0, $colorStroke ));
 	}
 	
-	/*
+	private function _parseLine($lineNode){
+		$x1 = 0;
+		$y1 = 0;
+		$x2 = 0;
+		$y2 = 0;
+		$stroke = '';
+		$strokeWidth = 1;
+		$strokeDasharray = '';
+		extract($this->_getParams($lineNode));
+		//case translate
+		if($this->_getParam('originX') !== null){
+			$x1 += $this->_getParam('originX');
+			$x2 += $this->_getParam('originX');
+		}
+		if($this->_getParam('originY') !== null){
+			$y1 += $this->_getParam('originY');
+			$y2 += $this->_getParam('originY');
+		}
+		//end translate
+		//case rotation
+		if($this->_getParam('rotate') !== null){
+			
+		}
+		//end rotation
+		//case scale
+		if($this->_getParam('scale') !== null){
+			$xrapport = ($x2 - $x1) / $this->_getParam('scale');
+			$x2 += $xrapport;
+			$yrapport = ($y2 - $y1) / $this->_getParam('scale');
+			$y2 += $yrapport;
+			if($this->_debug) $this->_log->message('scale by '.Log::decode($this->_getParam('scale')).':'.Log::decode($xrapport).' - '.Log::decode($yrapport));
+		}
+		//end scale
+		$colorStroke = $this->_allocateColor((string)$stroke);
+		$thickness = imagesetthickness( $this->_image , (int)$strokeWidth );
+		if($strokeDasharray != ''){
+			$strokeDasharray = explode(',', $strokeDasharray);
+			imagesetstyle ( $this->_image , $this->_getDashedStroke($strokeDasharray[0], $strokeDasharray[1], $colorStroke ));
+		}else
+			imagesetstyle ( $this->_image , $this->_getDashedStroke(10, 0, $colorStroke ));
+		
+		//if($this->_debug && !$thickness) $this->_log->error('Erreur dans la mise en place de l\'épaisseur du trait');
+		$this->_drawLine($x1, $y1, $x2, $y2, $colorStroke);
+		imagecolordeallocate($this->_image,$colorStroke);
+		imagesetthickness ( $this->_image , 1 );
+		imagesetstyle ( $this->_image , $this->_getDashedStroke(10, 0, $colorStroke ));
+	}
+	
+	/**
 	 * add a polygon in the final image
 	 * @param simpleXMLElement
 	 * @return po-po-po-polygon !
@@ -1062,26 +1056,6 @@ class SVGTOIMAGE{
 		$fill = '';
 		$stroke = '';
 		$strokeWidth = 1;
-		/*foreach($polyNode->attributes() as $name => $value){
-			switch($name){
-				// imagesetstyle  (pour dotted, dashed etc)
-				case 'points' : $points = $value; break;
-				case 'fill': $fill = ($value == 'none') ? '' : $value; break;
-				case 'stroke': $stroke = $value; break;
-				case 'stroke-width' : $strokeWidth = $value; break;
-				$allStyle = split('[;:]', $value);
-					$i = 0;
-					while ($i < count($allStyle)) {
-						if($allStyle[$i] == 'display' && $allStyle[$i+1] == 'none') return;
-						if($allStyle[$i] == 'fill') $fill = $allStyle[$i+1]; 
-						if($allStyle[$i] == 'stroke') $stroke = $allStyle[$i+1]; 
-						if($allStyle[$i] == 'stroke-width') $strokeWidth = $allStyle[$i+1]; 
-						$i=$i+2;
-					}
-					//if(strripos($value, 'display: none') || strripos($value, 'display:none')) return; 
-					break;
-			}
-		}*/
 		extract($this->_getParams($polyNode));
 		if($points == '')
 			return;
@@ -1102,7 +1076,7 @@ class SVGTOIMAGE{
 		imagesetthickness ( $this->_image , 1 );
 	}
 	
-	/*
+	/**
 	 * add the description text in the final image
 	 * @param string the description
 	 * @return boolean
@@ -1118,13 +1092,14 @@ class SVGTOIMAGE{
 	 * parse children
 	 */
 	private function _parseGroup($groupNode){
-		$this->_currentOptions = $this->_getParams($groupNode);
+		$this->_currentOptions[] = $this->_getParams($groupNode);
 		foreach($groupNode->children() as $element){
 			$this->_chooseParse($element);
 		}
+		unset($this->_currentOptions[count($this->_currentOptions) -1]);
 	}
 	
-	/*
+	/**
 	 * select what to parse 
 	 * @param simpleXMLElement
 	 * @return the selected function 
@@ -1146,6 +1121,8 @@ class SVGTOIMAGE{
 			$this->_parseGroup($element);
 		if($element->getName() == 'text')
 			$this->_parseText($element);
+		if($element->getName() == 'line')
+			$this->_parseLine($element);
 		//if($element->getName() == 'defs')
 		//	$this->_parseDefs($element);
 		//if($element->getName() == 'title')
@@ -1154,7 +1131,7 @@ class SVGTOIMAGE{
 			$this->_desc = $element;
 	}
 
-	/*
+	/**
 	 * parse everything, main function 
 	 * @param string format of the ouput 'png' 'gif' jpg'
 	 * @param string path where you want to save the file (with the final name), null will just show the image but not saved on server
